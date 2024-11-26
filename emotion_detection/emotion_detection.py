@@ -9,7 +9,7 @@ from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 
-model = load_model('SoftEng_BantAI\emotion_detection\model_file_30epochs.h5')
+model = load_model('C:\\Users\\HP\\PycharmProjects\\BantAI\\emotion_detection\\model_file_30epochs.h5')
 
 labels_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 4: 'Neutral', 5: 'Sad', 6: 'Surprise'}
 
