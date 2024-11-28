@@ -7,7 +7,8 @@ from PyQt5.QtGui import QImage, QPixmap
 from datetime import datetime
 from db_manager import db_manager
 
-class Ui_Dashboard(object):
+class Ui_Dashboard(object):\
+
     def __init__(self, username):
         self.username = username
         print("Username being passed to dashboard:", username)
@@ -22,7 +23,7 @@ class Ui_Dashboard(object):
         else:
             self.user_id = None
             print("Failed to get user ID")
-    
+
     def setupUi(self, Dashboard):
         self.Dashboard = Dashboard
         Dashboard.setObjectName("Dashboard")
@@ -31,7 +32,7 @@ class Ui_Dashboard(object):
             background-color: #f5f5f5;
             font-family: 'Segoe UI', sans-serif;
         """)
-        
+
         icon = QtGui.QIcon("../ui_files/logo_only.png")
         Dashboard.setWindowIcon(icon)
 
@@ -79,15 +80,16 @@ class Ui_Dashboard(object):
 
         # Create horizontal layout for buttons
         self.controlsLayout = QtWidgets.QHBoxLayout(self.controlsContainer)
-        self.controlsLayout.setContentsMargins(200, 0, 200, 0)
-        
+        self.controlsLayout.setContentsMargins(200, 0, 200, 0)  # Adjust margins as needed
+        self.controlsLayout.setSpacing(40)  # Set spacing between buttons
+
         # Start button
         self.startButton = QtWidgets.QPushButton("Start")
         self.startButton.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
                 color: white;
-                border-radius: 25px;  /* Increased for a rounder look */
+                border-radius: 25px;
                 padding: 10px 20px;
                 font: bold 13pt 'Segoe UI';
                 min-width: 120px;
@@ -109,7 +111,7 @@ class Ui_Dashboard(object):
             QPushButton {
                 background-color: #f44336;
                 color: white;
-                border-radius: 25px;  /* Increased for a rounder look */
+                border-radius: 25px;
                 padding: 10px 20px;
                 font: bold 13pt 'Segoe UI';
                 min-width: 120px;
@@ -126,6 +128,7 @@ class Ui_Dashboard(object):
 
         # Add buttons to layout
         self.controlsLayout.addWidget(self.startButton)
+        self.controlsLayout.addSpacing(40)  # Add spacing between buttons
         self.controlsLayout.addWidget(self.stopButton)
 
         # Action Button (Account with username from DB)
@@ -144,13 +147,13 @@ class Ui_Dashboard(object):
                 background-color: #4f9f9c;
             }
         """)
-        
+
         # Set username on push button after successful login
         self.set_username_button()
 
         # Connect the button click to navigate to AccPage
         self.pushButton.clicked.connect(self.go_to_acc_page)
-        
+
         Dashboard.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(Dashboard)
         self.statusbar.setObjectName("statusbar")
@@ -164,7 +167,7 @@ class Ui_Dashboard(object):
         self.face_detection = mp.solutions.face_detection.FaceDetection(min_detection_confidence=0.5)
         self.model = load_model('model_file_30epochs.h5')
 
-        self.labels_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 
+        self.labels_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy',
                            4: 'Neutral', 5: 'Sad', 6: 'Surprise'}
 
         # Set up a timer for updating the frame
