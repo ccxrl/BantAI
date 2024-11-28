@@ -1,14 +1,29 @@
+# dashboard.py
+
 from PyQt5 import QtCore, QtGui, QtWidgets
-import sys
-from db_manager import db_manager  # Assuming you have a db_manager class
+import cv2
+import numpy as np
+from tensorflow.keras.models import load_model
+import mediapipe as mp
+from PyQt5.QtGui import QImage, QPixmap
+from datetime import datetime
+from db_manager import db_manager  # Updated import
 
 class Ui_Dashboard(object):
     def __init__(self, username):
-        # Initialize with an empty username, to be filled after login
         self.username = username
         print("Username being passed to dashboard:", username)
-        self.AccPage_window = None  # Track the Account Page window
-
+        self.AccPage_window = None
+        # Get user_id from database using username
+        self.db = db_manager
+        user_data = self.db.get_user_by_username(username)
+        if user_data:
+            self.user_id = user_data['user_id']
+            print(f"User ID retrieved: {self.user_id}")
+        else:
+            self.user_id = None
+            print("Failed to get user ID")
+    
     def setupUi(self, Dashboard):
         self.Dashboard = Dashboard  # Store reference to the main dashboard window
         Dashboard.setObjectName("Dashboard")
@@ -25,23 +40,12 @@ class Ui_Dashboard(object):
         self.centralwidget = QtWidgets.QWidget(Dashboard)
         self.centralwidget.setObjectName("centralwidget")
 
-        # User Frame
-        self.User_Frame = QtWidgets.QFrame(self.centralwidget)
-        self.User_Frame.setGeometry(QtCore.QRect(70, 110, 591, 321))
-        self.User_Frame.setStyleSheet("""
-            background-color: white;
-            border-radius: 12px;
-            border: 1px solid #4f9f9c;
-        """)
-        self.User_Frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.User_Frame.setFrameShadow(QtWidgets.QFrame.Raised)
-
         # Biometrics scroll area
         self.Biometrics = QtWidgets.QScrollArea(self.centralwidget)
         self.Biometrics.setGeometry(QtCore.QRect(750, 110, 231, 491))
         self.Biometrics.setStyleSheet("""
             background-color: #ffffff;
-            border-radius: 12px;
+            border-radius: 15px;
         """)
         self.Biometrics.setWidgetResizable(True)
         self.Biometrics.setObjectName("Biometrics")
@@ -53,13 +57,19 @@ class Ui_Dashboard(object):
         # Scrollbar
         self.verticalScrollBar = QtWidgets.QScrollBar(self.scrollAreaWidgetContents)
         self.verticalScrollBar.setGeometry(QtCore.QRect(210, 0, 21, 491))
-        self.verticalScrollBar.setStyleSheet("""
-            background-color: #4faaaa;
-            border-radius: 5px;
-        """)
+        self.verticalScrollBar.setStyleSheet("background-color: #4faaaa;")
         self.verticalScrollBar.setOrientation(QtCore.Qt.Vertical)
         self.verticalScrollBar.setObjectName("verticalScrollBar")
         self.Biometrics.setWidget(self.scrollAreaWidgetContents)
+
+        # Emotion Display Frame (now showing the camera feed)
+        self.Emotion_Frame = QtWidgets.QLabel(self.centralwidget)
+        self.Emotion_Frame.setGeometry(QtCore.QRect(70, 110, 591, 321))
+        self.Emotion_Frame.setStyleSheet("""
+            background-color: black;
+            border-radius: 15px;
+        """)
+        self.Emotion_Frame.setAlignment(QtCore.Qt.AlignCenter)
 
         # Action Button (Account with username from DB)
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
@@ -77,13 +87,13 @@ class Ui_Dashboard(object):
                 background-color: #4f9f9c;
             }
         """)
-
+        
         # Set username on push button after successful login
         self.set_username_button()
 
         # Connect the button click to navigate to AccPage
         self.pushButton.clicked.connect(self.go_to_acc_page)
-
+        
         Dashboard.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(Dashboard)
         self.statusbar.setObjectName("statusbar")
@@ -92,6 +102,22 @@ class Ui_Dashboard(object):
         self.retranslateUi(Dashboard)
         QtCore.QMetaObject.connectSlotsByName(Dashboard)
 
+        # Initialize database connection using the singleton instance
+        self.db = db_manager
+
+        # Initialize webcam and emotion detection
+        self.cap = cv2.VideoCapture(0)
+        self.face_detection = mp.solutions.face_detection.FaceDetection(min_detection_confidence=0.5)
+        self.model = load_model('model_file_30epochs.h5')
+
+        self.labels_dict = {0: 'Angry', 1: 'Disgust', 2: 'Fear', 3: 'Happy', 
+                           4: 'Neutral', 5: 'Sad', 6: 'Surprise'}
+
+        # Set up a timer for updating the frame
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update_frame)
+        self.timer.start(30)  # Update every 30 ms
+    
     def retranslateUi(self, Dashboard):
         _translate = QtCore.QCoreApplication.translate
         Dashboard.setWindowTitle(_translate("Dashboard", "BantAI - HomePage"))
@@ -119,13 +145,107 @@ class Ui_Dashboard(object):
         
         self.AccPage_window.show()
 
-
     def on_accpage_closed(self, event):
         # Re-enable the main dashboard window when Account Page is closed
         self.Dashboard.setEnabled(True)
         event.accept()
 
+    def process_frame_with_model(self, frame):
+        """Detect faces and perform emotion recognition."""
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.face_detection.process(rgb_frame)
+
+        faces = []
+        emotions = []
+
+        if results.detections:
+            for detection in results.detections:
+                bboxC = detection.location_data.relative_bounding_box
+                ih, iw, _ = frame.shape
+                x = int(bboxC.xmin * iw)
+                y = int(bboxC.ymin * ih)
+                w = int(bboxC.width * iw)
+                h = int(bboxC.height * ih)
+
+                # Crop and preprocess the face for the model
+                face_img = frame[max(0, y):y+h, max(0, x):x+w]
+                gray_face = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY)
+                resized_face = cv2.resize(gray_face, (48, 48))
+                normalized_face = resized_face / 255.0
+                reshaped_face = np.reshape(normalized_face, (1, 48, 48, 1))
+
+                # Predict emotion
+                result = self.model.predict(reshaped_face)
+                label = np.argmax(result, axis=1)[0]
+
+                faces.append((x, y, w, h))
+                emotions.append(self.labels_dict[label])
+
+        return faces, emotions
+
+    def draw_emotion_info(self, frame, faces, emotions):
+        """Draw emotion information on the frame."""
+        for (x, y, w, h), emotion in zip(faces, emotions):
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 255), 2)
+
+            label_background = (255, 0, 255)
+            label_font_color = (255, 255, 255)
+            font_scale = 0.9
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            thickness = 2
+
+            (text_width, text_height), _ = cv2.getTextSize(emotion, font, font_scale, thickness)
+            cv2.rectangle(frame, (x, y - 30), (x + text_width, y), label_background, thickness=cv2.FILLED)
+            cv2.putText(frame, emotion, (x, y - 10), font, font_scale, label_font_color, thickness)
+
+        return frame
+
+    def update_frame(self):
+        """Capture frame from webcam and update the QLabel."""
+        if self.user_id is None:
+            print("Cannot record emotions: No valid user_id")
+            return
+
+        ret, frame = self.cap.read()
+        if not ret:
+            return
+
+        # Ensure the frame maintains 16:9 aspect ratio
+        height, width, _ = frame.shape
+        target_width = 640
+        target_height = int(target_width * 9 / 16)
+
+        # Resize the frame to 16:9
+        resized_frame = cv2.resize(frame, (target_width, target_height))
+
+        faces, emotions = self.process_frame_with_model(resized_frame)
+        
+        # Record emotions to database using the actual user_id
+        for emotion in emotions:
+            try:
+                self.db.record_emotion(user_id=self.user_id, emotion_type=emotion)
+            except Exception as e:
+                print(f"Error recording emotion: {e}")
+            
+        final_frame = self.draw_emotion_info(resized_frame, faces, emotions)
+
+        # Convert the frame to QImage for PyQt5 display
+        bytes_per_line = 3 * target_width
+        qImg = QImage(final_frame.data, target_width, target_height, 
+                     bytes_per_line, QImage.Format_BGR888)
+
+        # Display the image on the QLabel
+        self.Emotion_Frame.setPixmap(QPixmap.fromImage(qImg))
+
+    # def closeEvent(self, event):
+    #     """Release resources on close."""
+    #     if self.cap.isOpened():
+    #         self.cap.release()
+    #     self.db.close()  # Close the database connection
+    #     event.accept()
+
 if __name__ == "__main__":
+    import sys
     app = QtWidgets.QApplication(sys.argv)
     Dashboard = QtWidgets.QMainWindow()
     ui = Ui_Dashboard('example_username')
