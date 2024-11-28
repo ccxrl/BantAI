@@ -12,8 +12,8 @@ class Ui_Dashboard(object):
         self.username = username
         print("Username being passed to dashboard:", username)
         self.AccPage_window = None
-        self.is_detecting = True  # Flag to track detection state
-        # Get user_id from database using username
+        self.is_detecting = True
+        self.last_emotion = None
         self.db = db_manager
         user_data = self.db.get_user_by_username(username)
         if user_data:
@@ -24,7 +24,7 @@ class Ui_Dashboard(object):
             print("Failed to get user ID")
     
     def setupUi(self, Dashboard):
-        self.Dashboard = Dashboard  # Store reference to the main dashboard window
+        self.Dashboard = Dashboard
         Dashboard.setObjectName("Dashboard")
         Dashboard.resize(1076, 747)
         Dashboard.setStyleSheet("""
@@ -101,7 +101,7 @@ class Ui_Dashboard(object):
             }
         """)
         self.startButton.clicked.connect(self.start_detection)
-        self.startButton.setEnabled(False)  # Disabled initially since detection starts by default
+        self.startButton.setEnabled(False)
 
         # Stop button
         self.stopButton = QtWidgets.QPushButton("Stop")
@@ -312,13 +312,15 @@ class Ui_Dashboard(object):
         resized_frame = cv2.resize(frame, (target_width, target_height))
 
         faces, emotions = self.process_frame_with_model(resized_frame)
-        
-        # Record emotions to database using the actual user_id
+
+        # Only record emotion if it has changed
         for emotion in emotions:
-            try:
-                self.db.record_emotion(user_id=self.user_id, emotion_type=emotion)
-            except Exception as e:
-                print(f"Error recording emotion: {e}")
+            if emotion != self.last_emotion:  # Check if the emotion has changed
+                try:
+                    self.db.record_emotion(user_id=self.user_id, emotion_type=emotion)
+                    self.last_emotion = emotion  # Update the last detected emotion
+                except Exception as e:
+                    print(f"Error recording emotion: {e}")
             
         final_frame = self.draw_emotion_info(resized_frame, faces, emotions)
 
