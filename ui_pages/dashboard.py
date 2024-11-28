@@ -1,5 +1,3 @@
-# dashboard.py
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 import cv2
 import numpy as np
@@ -7,13 +5,14 @@ from tensorflow.keras.models import load_model
 import mediapipe as mp
 from PyQt5.QtGui import QImage, QPixmap
 from datetime import datetime
-from db_manager import db_manager  # Updated import
+from db_manager import db_manager
 
 class Ui_Dashboard(object):
     def __init__(self, username):
         self.username = username
         print("Username being passed to dashboard:", username)
         self.AccPage_window = None
+        self.is_detecting = True  # Flag to track detection state
         # Get user_id from database using username
         self.db = db_manager
         user_data = self.db.get_user_by_username(username)
@@ -62,7 +61,7 @@ class Ui_Dashboard(object):
         self.verticalScrollBar.setObjectName("verticalScrollBar")
         self.Biometrics.setWidget(self.scrollAreaWidgetContents)
 
-        # Emotion Display Frame (now showing the camera feed)
+        # Emotion Display Frame
         self.Emotion_Frame = QtWidgets.QLabel(self.centralwidget)
         self.Emotion_Frame.setGeometry(QtCore.QRect(70, 110, 591, 321))
         self.Emotion_Frame.setStyleSheet("""
@@ -70,6 +69,64 @@ class Ui_Dashboard(object):
             border-radius: 15px;
         """)
         self.Emotion_Frame.setAlignment(QtCore.Qt.AlignCenter)
+
+        # Add control buttons container
+        self.controlsContainer = QtWidgets.QWidget(self.centralwidget)
+        self.controlsContainer.setGeometry(QtCore.QRect(70, 440, 591, 50))
+        self.controlsContainer.setStyleSheet("""
+            background-color: transparent;
+        """)
+
+        # Create horizontal layout for buttons
+        self.controlsLayout = QtWidgets.QHBoxLayout(self.controlsContainer)
+        self.controlsLayout.setContentsMargins(200, 0, 200, 0)
+        
+        # Start button
+        self.startButton = QtWidgets.QPushButton("Start")
+        self.startButton.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border-radius: 25px;  /* Increased for a rounder look */
+                padding: 10px 20px;
+                font: bold 13pt 'Segoe UI';
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #777777;
+            }
+        """)
+        self.startButton.clicked.connect(self.start_detection)
+        self.startButton.setEnabled(False)  # Disabled initially since detection starts by default
+
+        # Stop button
+        self.stopButton = QtWidgets.QPushButton("Stop")
+        self.stopButton.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border-radius: 25px;  /* Increased for a rounder look */
+                padding: 10px 20px;
+                font: bold 13pt 'Segoe UI';
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background-color: #da190b;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #777777;
+            }
+        """)
+        self.stopButton.clicked.connect(self.stop_detection)
+
+        # Add buttons to layout
+        self.controlsLayout.addWidget(self.startButton)
+        self.controlsLayout.addWidget(self.stopButton)
 
         # Action Button (Account with username from DB)
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
@@ -102,9 +159,6 @@ class Ui_Dashboard(object):
         self.retranslateUi(Dashboard)
         QtCore.QMetaObject.connectSlotsByName(Dashboard)
 
-        # Initialize database connection using the singleton instance
-        self.db = db_manager
-
         # Initialize webcam and emotion detection
         self.cap = cv2.VideoCapture(0)
         self.face_detection = mp.solutions.face_detection.FaceDetection(min_detection_confidence=0.5)
@@ -125,6 +179,42 @@ class Ui_Dashboard(object):
     def set_username_button(self):
         # Set the username on the push button
         self.pushButton.setText(self.username)
+
+    def start_detection(self):
+        """Start emotion detection"""
+        self.is_detecting = True
+        self.startButton.setEnabled(False)
+        self.stopButton.setEnabled(True)
+
+    def stop_detection(self):
+        """Stop emotion detection"""
+        self.is_detecting = False
+        self.startButton.setEnabled(True)
+        self.stopButton.setEnabled(False)
+        
+        # Display a paused message on the frame
+        height = self.Emotion_Frame.height()
+        width = self.Emotion_Frame.width()
+        blank_image = np.zeros((height, width, 3), np.uint8)
+        blank_image.fill(0)  # Black background
+        
+        # Add "Detection Paused" text
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        text = "Detection Paused"
+        font_scale = 1
+        thickness = 2
+        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+        
+        # Calculate text position to center it
+        text_x = (width - text_size[0]) // 2
+        text_y = (height + text_size[1]) // 2
+        
+        cv2.putText(blank_image, text, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+        
+        # Convert to QImage and display
+        bytes_per_line = 3 * width
+        qImg = QImage(blank_image.data, width, height, bytes_per_line, QImage.Format_BGR888)
+        self.Emotion_Frame.setPixmap(QPixmap.fromImage(qImg))
 
     def go_to_acc_page(self):
         # Disable the main dashboard window
@@ -202,6 +292,9 @@ class Ui_Dashboard(object):
 
     def update_frame(self):
         """Capture frame from webcam and update the QLabel."""
+        if not self.is_detecting:
+            return
+
         if self.user_id is None:
             print("Cannot record emotions: No valid user_id")
             return
@@ -236,13 +329,6 @@ class Ui_Dashboard(object):
 
         # Display the image on the QLabel
         self.Emotion_Frame.setPixmap(QPixmap.fromImage(qImg))
-
-    # def closeEvent(self, event):
-    #     """Release resources on close."""
-    #     if self.cap.isOpened():
-    #         self.cap.release()
-    #     self.db.close()  # Close the database connection
-    #     event.accept()
 
 if __name__ == "__main__":
     import sys
