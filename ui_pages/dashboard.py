@@ -6,9 +6,10 @@ import mediapipe as mp
 from PyQt5.QtGui import QImage, QPixmap
 from datetime import datetime
 from db_manager import db_manager
+from advice_system import EmotionAdviceSystem, AdviceDialog
+from datetime import datetime
 
-class Ui_Dashboard(object):\
-
+class Ui_Dashboard(object):
     def __init__(self, username):
         self.username = username
         print("Username being passed to dashboard:", username)
@@ -16,6 +17,8 @@ class Ui_Dashboard(object):\
         self.is_detecting = True
         self.last_emotion = None
         self.db = db_manager
+        self.emotion_advice_system = EmotionAdviceSystem()  # Initialize the advice system
+        self.last_advice_time = None
         user_data = self.db.get_user_by_username(username)
         if user_data:
             self.user_id = user_data['user_id']
@@ -316,12 +319,26 @@ class Ui_Dashboard(object):\
 
         faces, emotions = self.process_frame_with_model(resized_frame)
 
-        # Only record emotion if it has changed
+        # Check for emotions and generate advice if needed
+        current_time = datetime.now()
         for emotion in emotions:
-            if emotion != self.last_emotion:  # Check if the emotion has changed
+            if emotion != self.last_emotion:
                 try:
                     self.db.record_emotion(user_id=self.user_id, emotion_type=emotion)
-                    self.last_emotion = emotion  # Update the last detected emotion
+                    self.last_emotion = emotion
+                    
+                    # Check if the emotion is Sad or Angry and show advice
+                    if emotion in ['Sad', 'Angry']:
+                        if (self.last_advice_time is None or 
+                            (current_time - self.last_advice_time).total_seconds() > 60):
+                            try:
+                                advice = self.emotion_advice_system.generate_advice(emotion)
+                                dialog = AdviceDialog(advice, self.Dashboard)
+                                dialog.show()
+                                self.last_advice_time = current_time
+                            except Exception as e:
+                                print(f"Error generating advice: {e}")
+                                
                 except Exception as e:
                     print(f"Error recording emotion: {e}")
             
