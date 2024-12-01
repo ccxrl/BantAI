@@ -1,7 +1,7 @@
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from db_manager import db_manager  # Import the database manager
-from sign_up_final import Ui_SignUp  # Assuming the sign-up page is in sign_up_final.py
+from db_manager import db_manager
+from sign_up_final import Ui_SignUp
 
 class Ui_LogIn(object):
     def setupUi(self, LogIn):
