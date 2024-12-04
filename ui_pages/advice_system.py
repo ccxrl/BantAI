@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import torch
+import google.generativeai as genai
 
 class AdviceDialog(QDialog):
     def __init__(self, advice_text, parent=None):
@@ -46,34 +47,21 @@ class AdviceDialog(QDialog):
         self.resize(400, 200)
 
 class EmotionAdviceSystem:
-    def __init__(self):
-        self.tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-        self.model = GPT2LMHeadModel.from_pretrained("distilgpt2")
+    def __init__(self, api_key):
+        # Configure Gemini AI with the provided API key
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel("gemini-1.5-flash")
         
     def generate_advice(self, emotion):
         prompts = {
-            "Sad": "Here's some supportive advice for someone feeling sad: ",
-            "Angry": "Here's some calming advice for someone feeling angry: "
+            "Sad": "Provide a short advice to someone who feels sad: ",
+            "Angry": "Provide a short advice to someone who feels angry: "
         }
         
-        prompt = prompts.get(emotion, "Here's some advice: ")
+        prompt = prompts.get(emotion, "Provide advice: ")
         
-        # Encode the prompt
-        inputs = self.tokenizer.encode(prompt, return_tensors="pt")
+        # Generate advice using Gemini AI
+        response = self.model.generate_content(prompt)
         
-        # Generate response
-        outputs = self.model.generate(
-            inputs,
-            max_length=100,
-            num_return_sequences=1,
-            no_repeat_ngram_size=2,
-            do_sample=True,
-            top_k=50,
-            top_p=0.95,
-            temperature=0.7,
-            pad_token_id=self.tokenizer.eos_token_id
-        )
-        
-        # Decode and return the generated text
-        advice = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return advice
+        # Return the generated advice
+        return response.text
