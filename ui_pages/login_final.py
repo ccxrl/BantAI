@@ -80,15 +80,15 @@ class Ui_LogIn(object):
         
         if user_data:
             print("Login successful!")
-            username = user_data['username']  # Get the username from the returned user data
-            self.open_dashboard_page(username)  # Pass the username to the dashboard page
+            username = user_data['username']
+            self.open_dashboard_page(username)
             print("Login successful!")
         
             # Debug prints
             print("Login input:", username_or_email)
             print("Authenticated user data:", user_data)
             
-            username = user_data['username']  # Get the username from the returned user data
+            username = user_data['username']
             print("Username being passed to dashboard:", username)
         else:
             print("Invalid credentials!")
@@ -97,7 +97,7 @@ class Ui_LogIn(object):
     def open_signup_page(self):
         """Opens the signup page."""
         self.signup_window = QtWidgets.QMainWindow()
-        self.ui_signup = Ui_SignUp()  # Import and use the sign-up class
+        self.ui_signup = Ui_SignUp()
         self.ui_signup.setupUi(self.signup_window)
         self.signup_window.show()
 
@@ -108,7 +108,7 @@ class Ui_LogIn(object):
         """Opens the dashboard page."""
         from dashboard import Ui_Dashboard
         self.dashboard_window = QtWidgets.QMainWindow()
-        self.ui_dashboard = Ui_Dashboard(username)  # Pass user data to dashboard
+        self.ui_dashboard = Ui_Dashboard(username)
         self.ui_dashboard.setupUi(self.dashboard_window)
         self.dashboard_window.show()
 
@@ -117,13 +117,13 @@ class Ui_LogIn(object):
 
     def show_message(self, title, message):
         """Displays a message box with custom design."""
-        msg_box = QtWidgets.QMessageBox(self.centralwidget)  # Use self as the parent to ensure it stays on top
+        msg_box = QtWidgets.QMessageBox(self.centralwidget)
         msg_box.setWindowTitle(title)
         msg_box.setText(message)
-        msg_box.setIcon(QtWidgets.QMessageBox.Information)  # Set the default information icon
+        msg_box.setIcon(QtWidgets.QMessageBox.Information)
 
         # Set custom window icon
-        icon = QtGui.QIcon("../ui_files/logo_only.png")  # Update the path to your logo file
+        icon = QtGui.QIcon("../ui_files/logo_only.png")
         msg_box.setWindowIcon(icon)
 
         # Apply custom styling to the message box
@@ -162,7 +162,7 @@ class Ui_LogIn(object):
 # Main execution
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    LogIn = QtWidgets.QMainWindow()  # Changed to QMainWindow to match the design
+    LogIn = QtWidgets.QMainWindow()
     ui = Ui_LogIn()
     ui.setupUi(LogIn)
     LogIn.show()
