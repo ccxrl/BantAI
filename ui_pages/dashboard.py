@@ -17,7 +17,7 @@ class Ui_Dashboard(object):
         self.is_detecting = True
         self.last_emotion = None
         self.db = db_manager
-        self.emotion_advice_system = EmotionAdviceSystem()  # Initialize the advice system
+        self.emotion_advice_system = EmotionAdviceSystem("API_KEY_HERE")
         self.last_advice_time = None
         user_data = self.db.get_user_by_username(username)
         if user_data:
@@ -83,8 +83,8 @@ class Ui_Dashboard(object):
 
         # Create horizontal layout for buttons
         self.controlsLayout = QtWidgets.QHBoxLayout(self.controlsContainer)
-        self.controlsLayout.setContentsMargins(200, 0, 200, 0)  # Adjust margins as needed
-        self.controlsLayout.setSpacing(40)  # Set spacing between buttons
+        self.controlsLayout.setContentsMargins(200, 0, 200, 0)
+        self.controlsLayout.setSpacing(40)
 
         # Start button
         self.startButton = QtWidgets.QPushButton("Start")
@@ -131,7 +131,7 @@ class Ui_Dashboard(object):
 
         # Add buttons to layout
         self.controlsLayout.addWidget(self.startButton)
-        self.controlsLayout.addSpacing(40)  # Add spacing between buttons
+        self.controlsLayout.addSpacing(40)
         self.controlsLayout.addWidget(self.stopButton)
 
         # Action Button (Account with username from DB)
@@ -242,7 +242,6 @@ class Ui_Dashboard(object):
         self.AccPage_window.show()
 
     def on_accpage_closed(self, event):
-        # Re-enable the main dashboard window when Account Page is closed
         self.Dashboard.setEnabled(True)
         event.accept()
 
@@ -296,6 +295,66 @@ class Ui_Dashboard(object):
 
         return frame
 
+
+    # GENERATE ADVICE EVERYTIME EMOTION DETECTED IS SAD OR ANGRY
+    # def update_frame(self):
+    #     """Capture frame from webcam and update the QLabel."""
+    #     if not self.is_detecting:
+    #         return
+
+    #     if self.user_id is None:
+    #         print("Cannot record emotions: No valid user_id")
+    #         return
+
+    #     ret, frame = self.cap.read()
+    #     if not ret:
+    #         return
+
+    #     # Ensure the frame maintains 16:9 aspect ratio
+    #     height, width, _ = frame.shape
+    #     target_width = 640
+    #     target_height = int(target_width * 9 / 16)
+
+    #     # Resize the frame to 16:9
+    #     resized_frame = cv2.resize(frame, (target_width, target_height))
+
+    #     faces, emotions = self.process_frame_with_model(resized_frame)
+
+    #     # Check for emotions and generate advice if needed
+    #     current_time = datetime.now()
+    #     for emotion in emotions:
+    #         # Only generate advice if the emotion has changed
+    #         if emotion != self.last_emotion:
+    #             try:
+    #                 self.db.record_emotion(user_id=self.user_id, emotion_type=emotion)
+    #                 self.last_emotion = emotion
+
+    #                 # Check if the emotion is Sad or Angry and show advice
+    #                 if emotion in ['Sad', 'Angry']:
+    #                     try:
+    #                         advice = self.emotion_advice_system.generate_advice(emotion)
+    #                         dialog = AdviceDialog(advice, self.Dashboard)
+    #                         dialog.show()
+
+    #                     except Exception as e:
+    #                         print(f"Error generating advice: {e}")
+
+    #             except Exception as e:
+    #                 print(f"Error recording emotion: {e}")
+                
+    #     final_frame = self.draw_emotion_info(resized_frame, faces, emotions)
+
+    #     # Convert the frame to QImage for PyQt5 display
+    #     bytes_per_line = 3 * target_width
+    #     qImg = QImage(final_frame.data, target_width, target_height, 
+    #                 bytes_per_line, QImage.Format_BGR888)
+
+    #     # Display the image on the QLabel
+    #     self.Emotion_Frame.setPixmap(QPixmap.fromImage(qImg))
+
+
+
+    # GENERATE ADVICE ONLY EVERY 30 SECONDS
     def update_frame(self):
         """Capture frame from webcam and update the QLabel."""
         if not self.is_detecting:
@@ -322,35 +381,37 @@ class Ui_Dashboard(object):
         # Check for emotions and generate advice if needed
         current_time = datetime.now()
         for emotion in emotions:
-            if emotion != self.last_emotion:
+            # Only generate advice if the emotion has changed and cooldown has passed
+            if emotion != self.last_emotion and (self.last_advice_time is None or 
+                (current_time - self.last_advice_time).total_seconds() > 30):
                 try:
                     self.db.record_emotion(user_id=self.user_id, emotion_type=emotion)
                     self.last_emotion = emotion
-                    
+
                     # Check if the emotion is Sad or Angry and show advice
                     if emotion in ['Sad', 'Angry']:
-                        if (self.last_advice_time is None or 
-                            (current_time - self.last_advice_time).total_seconds() > 60):
-                            try:
-                                advice = self.emotion_advice_system.generate_advice(emotion)
-                                dialog = AdviceDialog(advice, self.Dashboard)
-                                dialog.show()
-                                self.last_advice_time = current_time
-                            except Exception as e:
-                                print(f"Error generating advice: {e}")
-                                
+                        try:
+                            advice = self.emotion_advice_system.generate_advice(emotion)
+                            dialog = AdviceDialog(advice, self.Dashboard)
+                            dialog.show()
+                            self.last_advice_time = current_time  # Update last advice time
+
+                        except Exception as e:
+                            print(f"Error generating advice: {e}")
+
                 except Exception as e:
                     print(f"Error recording emotion: {e}")
-            
+                
         final_frame = self.draw_emotion_info(resized_frame, faces, emotions)
 
         # Convert the frame to QImage for PyQt5 display
         bytes_per_line = 3 * target_width
         qImg = QImage(final_frame.data, target_width, target_height, 
-                     bytes_per_line, QImage.Format_BGR888)
+                    bytes_per_line, QImage.Format_BGR888)
 
         # Display the image on the QLabel
         self.Emotion_Frame.setPixmap(QPixmap.fromImage(qImg))
+
 
 if __name__ == "__main__":
     import sys

@@ -1,6 +1,4 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
-import torch
 import google.generativeai as genai
 
 class AdviceDialog(QDialog):
