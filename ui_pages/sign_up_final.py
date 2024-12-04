@@ -125,7 +125,7 @@ class Ui_SignUp(object):
             return
 
         # Check if username or email already exists
-        if db_manager.check_if_user_exists(username, email):  # Assuming you have this method
+        if db_manager.check_if_user_exists(username, email):
             self.show_message("Error", "Username or email already exists!")
             return
 
@@ -134,7 +134,7 @@ class Ui_SignUp(object):
         if user_id:
             self.show_message("Success", "Account created successfully!")
             print(f"User registered with ID {user_id}")
-            self.open_userdata_form(user_id)  # Pass user_id to the method here
+            self.open_userdata_form(user_id)
         else:
             self.show_message("Error", "User registration failed.")
             print("User registration failed.")
@@ -144,7 +144,7 @@ class Ui_SignUp(object):
         """Opens the UserDataForm after successful signup."""
         # Create the UserDataForm and pass the user_id
         self.userdata_window = QtWidgets.QMainWindow()
-        self.ui_userdata = Ui_UserDataForm(user_id)  # Pass user_id to the constructor
+        self.ui_userdata = Ui_UserDataForm(user_id)
         self.ui_userdata.setupUi(self.userdata_window)
         self.userdata_window.show()
 
@@ -182,7 +182,7 @@ class Ui_SignUp(object):
 # Main execution
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    SignUp = QtWidgets.QMainWindow()  # Changed to QMainWindow
+    SignUp = QtWidgets.QMainWindow()
     ui = Ui_SignUp()
     ui.setupUi(SignUp)
     SignUp.show()
