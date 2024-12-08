@@ -132,7 +132,7 @@ class Ui_UserDataForm(object):
 
     def open_login_page(self):
         """Opens the login page (you can implement the logic)."""
-        from login_final import Ui_LogIn
+        from main import Ui_LogIn
         self.logIn_window = QtWidgets.QMainWindow()
         self.ui_login = Ui_LogIn()
         self.ui_login.setupUi(self.logIn_window)

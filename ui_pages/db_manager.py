@@ -42,7 +42,7 @@ class DatabaseManager:
         """Hash password using SHA-256"""
         return hashlib.sha256(password.encode()).hexdigest()
 
-    def record_emotion(self, user_id, emotion_type):
+    def record_emotion(self, user_id, emotion_type, heart_rate_id=None):
         """
         Record emotion data for a user
         :param user_id: User's unique identifier
@@ -50,17 +50,16 @@ class DatabaseManager:
         """
         try:
             query = """
-            INSERT INTO user_emotion 
-            (user_id, emotion_type, timestamp) 
-            VALUES (%s, %s, %s)
-            """
-            current_time = datetime.now()
-            data = (user_id, emotion_type, current_time)
-            self.cursor.execute(query, data)
+                INSERT INTO user_emotion 
+                (user_id, emotion_type, timestamp, heart_rate_id) 
+                VALUES (%s, %s, NOW(), %s)
+                """
+            self.cursor.execute(query, (user_id, emotion_type, heart_rate_id))
             self.connection.commit()
-            print(f"Recorded emotion: {emotion_type}")
+            return self.cursor.lastrowid
         except Error as e:
             print(f"Error recording emotion: {e}")
+            return None
 
     def register_user(self, first_name, last_name, username, email, password):
         """Register a new user"""
@@ -229,19 +228,19 @@ class DatabaseManager:
             print(f"Error adding emotion record: {e}")
             return None
 
-    def add_heart_rate_record(self, user_id, heart_rate):
-        """Add heart rate record for a user"""
+    def add_heart_rate_record(self, user_id, heart_rate, spo2):
+        """Add heart rate and SpO2 record for a user"""
         try:
             query = """
             INSERT INTO user_heart_rate 
-            (user_id, heart_rate, timestamp) 
-            VALUES (%s, %s, NOW())
+            (user_id, heart_rate, spo2, timestamp) 
+            VALUES (%s, %s, %s, NOW())
             """
-            self.cursor.execute(query, (user_id, heart_rate))
+            self.cursor.execute(query, (user_id, heart_rate, spo2))
             self.connection.commit()
             return self.cursor.lastrowid
         except Error as e:
-            print(f"Error adding heart rate record: {e}")
+            print(f"Error adding heart rate and SpO2 record: {e}")
             return None
 
     def check_if_user_exists(self, username, email):
