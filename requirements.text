@@ -6,3 +6,7 @@ mysql-connector
 PyQt5
 bcrypt
 google-generativeai
+bleak
+keyboard
+pyserial
+pyinstaller

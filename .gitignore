@@ -1,0 +1,6 @@
+.venv/
+
+ui_pages/dist/
+ui_pages/build/
+
+*.spec
