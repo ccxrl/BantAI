@@ -1,3 +1,5 @@
+BantAI is a desktop app that provides AI generated emotional advice based on the detected user's emotion.
+
 **To install neccessary libraries**
 
 run:
