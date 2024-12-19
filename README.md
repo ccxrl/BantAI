@@ -17,3 +17,7 @@ pyinstaller main.py --onefile
 ->Then wait to finish analyzing
 ->New folders will be created build and dist
 ->got to dist and create shortcut of it and put in desktop
+
+![image][images/bantai_1.png]
+![image][images/bantai_2.png]
+![image][images/bantai_3.png]
